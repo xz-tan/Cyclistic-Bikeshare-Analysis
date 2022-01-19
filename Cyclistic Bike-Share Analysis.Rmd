@@ -1,0 +1,383 @@
+---
+title: "Cyclistic Bike-Share Analysis"
+output:
+  html_document:
+    df_print: paged
+  pdf_document: default
+---
+
+## Introduction
+This is the capstone project for the Google Analytics Professional Certificate. It is my first time utilising SQL and R in an analytics project and I look forward to receiving any feedback or improvement to my analytics process. Do feel free to reach out to me through email (xztan123@gmail.com). 
+The case study can be found [here](https://d3c33hcgiwev3.cloudfront.net/aacF81H_TsWnBfNR_x7FIg_36299b28fa0c4a5aba836111daad12f1_DAC8-Case-Study-1.pdf?Expires=1641254400&Signature=fKXqL6QmrCS8NP6N9hx6OWOsbX~jpsrW5JWljrljNICoRUKefTGCz3mXOew95bdlncC1kkmsHhxKDNJ-k-cM9B6uWU2G2oZR4NA3bESlduSHycHO2B81zVRPm8isqdDQc7nyUj2TYXPkhEv0kntit6IpWUjJiV4WodwKI6y~X0g_&Key-Pair-Id=APKAJLTNE6QMUY6HBC5A). I will also be following the 6 crucial steps of the data analysis process: **Ask, Prepare, Process, Analyze, Share, Act**.
+
+## Brief Overview of Case Study
+You are a junior data analyst working in the marketing analyst team at Cyclistic, a bike-share company in Chicago. Until now, Cyclistic’s marketing strategy relied on building general awareness and appealing to broad consumer segments. One approach that helped make these things possible was the flexibility of its pricing plans: single-ride passes, full-day passes, and annual memberships. Customers who purchase single-ride or full-day passes are referred to as casual riders. Customers who purchase annual memberships are Cyclistic members. 
+
+The director of marketing believes the company’s future success depends on maximizing the number of annual memberships as Cyclistic’s finance analysts have concluded that annual members are much more profitable than casual riders. Rather than creating a marketing campaign that targets all-new customers, the director believes there is a very good chance to convert casual riders into members since casual riders are already aware of the Cyclistic
+program and have chosen Cyclistic for their mobility needs. 
+
+Therefore, your team wants to understand how casual riders and annual members use Cyclistic bikes differently. From these insights, your team will design a new marketing strategy to convert casual riders into annual members. But first, Cyclistic executives must approve your recommendations, so they must be backed up with compelling data insights and professional data visualizations.
+
+## 1) Ask
+The task we have at hand is to try and identify how annual members and casual riders use Cyclistic bikes differently. Using these insights, we will generate possible solutions aimed at converting the casual riders into annual members, thereby increasing the profit for the company. Once we have a clear business task that we want to complete, we can proceed to our next phase.
+
+## 2) Prepare
+We are given Cyclistic’s historical trip data to analyze and identify trends. They are available in monthly CSV files on this [site](https://divvy-tripdata.s3.amazonaws.com/index.html). According to the case study, the datasets have a different name because Cyclistic is a fictional company and these datasets are appropriate and will enable us to answer the business questions. The data has been made available by
+Motivate International Inc. under this [license](https://www.divvybikes.com/data-license-agreement).
+
+### Data Source & Integrity
+Upon further research, the data is uploaded by an actual bike sharing company based in Chicago named **Divvy**. The historical trip data is released to the public on a monthly schedule and according to their [website](https://ride.divvybikes.com/system-data), each trip is anonymized and includes:
+
+* Trip start day and time
+* Trip end day and time
+* Trip start station
+* Trip end station
+* Rider type (Member, Single Ride, and Day Pass)
+
+The data has been processed to remove trips that are taken by staff as they service and inspect the system; and any trips that were below 60 seconds in length (potentially false starts or users trying to re-dock a bike to ensure it was secure).
+
+Since the data Divvy provided coincides with the data in the monthly CSV files, it should be safe to say that the data is original, current and comprehensive. However, the reliability of it can only be confirmed after we have seen the data.
+
+### Preparation of Data
+I have selected the historical trip data from the past 12 months (12/2020 to 11/2021). Upon opening the CSV files through Microsoft Excel, I realised that the number of rows (trips) per month ranges from 50,000 to 800,000. Excel has a limit of 1,048,576 and therefore it is not suitable for analysis especially after we have merged the monthly data later.
+
+Therefore, I have uploaded the dataset into Google BigQuery to aid in the pre-processing of the data. CSV files larger than 100MB has also been broken into smaller files due to BigQuery sandbox account restriction. Each CSV file is uploaded as a table and all the tables are combined to form a final table 'combined_data` of more than 5 million rows, containing all the historical trips from 01/12/2020 to 30/11/2021. The query is as below:
+
+
+```{r eval=FALSE, include=TRUE}
+CREATE TABLE `bike-sharing-data-336906.bike_trip_data_202012_to_202111.combined_data` AS 
+    (SELECT * FROM `bike-sharing-data-336906.bike_trip_data_202012_to_202111.202012` 
+    UNION ALL SELECT * FROM `bike-sharing-data-336906.bike_trip_data_202012_to_202111.202101`
+    UNION ALL SELECT * FROM `bike-sharing-data-336906.bike_trip_data_202012_to_202111.202102`
+    UNION ALL SELECT * FROM `bike-sharing-data-336906.bike_trip_data_202012_to_202111.202103`
+    UNION ALL SELECT * FROM `bike-sharing-data-336906.bike_trip_data_202012_to_202111.202104`
+    UNION ALL SELECT * FROM `bike-sharing-data-336906.bike_trip_data_202012_to_202111.202105`
+    UNION ALL SELECT * FROM `bike-sharing-data-336906.bike_trip_data_202012_to_202111.202106v1`
+    UNION ALL SELECT * FROM `bike-sharing-data-336906.bike_trip_data_202012_to_202111.202106v2`
+    UNION ALL SELECT * FROM `bike-sharing-data-336906.bike_trip_data_202012_to_202111.202107v1`
+    UNION ALL SELECT * FROM `bike-sharing-data-336906.bike_trip_data_202012_to_202111.202107v2`
+    UNION ALL SELECT * FROM `bike-sharing-data-336906.bike_trip_data_202012_to_202111.202108v1`
+    UNION ALL SELECT * FROM `bike-sharing-data-336906.bike_trip_data_202012_to_202111.202108v2`
+    UNION ALL SELECT * FROM `bike-sharing-data-336906.bike_trip_data_202012_to_202111.202109v1`
+    UNION ALL SELECT * FROM `bike-sharing-data-336906.bike_trip_data_202012_to_202111.202109v2`
+    UNION ALL SELECT * FROM `bike-sharing-data-336906.bike_trip_data_202012_to_202111.202110v1`
+    UNION ALL SELECT * FROM `bike-sharing-data-336906.bike_trip_data_202012_to_202111.202110v2`
+    UNION ALL SELECT * FROM `bike-sharing-data-336906.bike_trip_data_202012_to_202111.202111`)
+```
+
+There are 13 columns: **ride_id, rideable_type, started_at, ended_at,	start_station_name,	start_station_id,	end_station_name,	end_station_id,	start_lat,	start_lng,	end_lat,	end_lng,	member_casual**. A typical row would look like this:
+
+ride_id	| rideable_type |	started_at | ended_at |	start_station_name | start_station_id |	end_station_name |	end_station_id |	start_lat |	start_lng |	end_lat |	end_lng |	member_casual |
+|:----:|:----:|:----:|:----:|:----:|:----:|:----:|:----:|:----:|:----:|:----:|:----:|:----:|
+89E7AA6C29227EFF |	classic_bike |	12/2/2021 16:14 |	12/2/2021 16:21 |	Glenwood Ave & Touhy Ave |	525	| Sheridan Rd & Columbia Ave |	660	| 42.012701 | -87.666058 |	42.004583 |	-87.661406 |	member |
+
+
+From preliminary examination of the data, there are rows with null values in them. Since we do not have a complete picture on why these trips have missing details, I have decided to only select the trips with complete details for analysis. The summary of the number of trips left and the query used:
+
+| num_trips_initially  | num_trips_no_null_value| percentage_trips_left |
+| :----:  |  :----: | :----: |
+|5,794,711|4,525,842|78.1%|
+
+```{r eval=FALSE, include=TRUE}
+CREATE TABLE `bike-sharing-data-336906.bike_trip_data_202012_to_202111.complete_data` AS 
+    (SELECT  *
+    
+    FROM `bike-sharing-data-336906.bike_trip_data_202012_to_202111.combined_data`
+
+    WHERE 
+        ride_id IS NOT NULL AND rideable_type IS NOT NULL AND started_at IS NOT NULL AND ended_at IS NOT NULL AND start_station_name IS NOT NULL AND start_station_id IS NOT NULL AND end_station_name IS NOT NULL AND end_station_id IS NOT NULL AND start_lat IS NOT NULL AND start_lng IS NOT NULL AND end_lat IS NOT NULL AND end_lng IS NOT NULL AND member_casual IS NOT NULL)
+
+```
+
+
+## 3) Process
+
+At this step, we will conduct data validation and cleaning to ensure that it is ready for analysis later on. 
+
+### Data Cleaning
+
+Firstly, the **ride_id** for each trip should be distinct. Using the query below, I have verified that there are 6 trips with duplicated **ride_id**.
+```{r eval=FALSE, include=TRUE}
+SELECT 
+    * 
+FROM 
+    `bike-sharing-data-336906.bike_trip_data_202012_to_202111.complete_data` 
+WHERE 
+    ride_id IN (SELECT 
+        ride_id 
+    FROM 
+        `bike-sharing-data-336906.bike_trip_data_202012_to_202111.complete_data` 
+    GROUP BY 
+        ride_id 
+    HAVING COUNT(ride_id) > 1)
+
+```
+
+| Row | ride_id         | rideable_type        | started_at                     | ended_at                       | start_station_name                       | start_station_id    | end_station_name                  | end_station_id      | start_lat       | start_lng       | end_lat         | end_lng         | member_casual |
+|:---:|-----------------|----------------------|--------------------------------|--------------------------------|------------------------------------------|---------------------|-----------------------------------|---------------------|-----------------|-----------------|-----------------|-----------------|---------------|
+|  1  |     5.03E+14    |     electric_bike    |     2021-10-16 08:13:00 UTC    |     2021-10-16 08:16:00 UTC    |     Wood St & Milwaukee Ave              |     13221           |     Damen Ave & Division St       |     13136           |     41.90752    |     -87.6725    |     41.90322    |     -87.6784    |     member    |
+|  2  |     5.03E+14    |     classic_bike     |     2021-06-14 17:39:00 UTC    |     2021-06-14 17:52:00 UTC    |     Wilton Ave & Diversey Pkwy           |     TA1306000014    |     Clark St & Schiller St        |     TA1309000024    |     41.93242    |     -87.6527    |     41.90799    |     -87.6315    |     casual    |
+|  3  |     7.67E+19    |     classic_bike     |     2021-09-10 13:25:00 UTC    |     2021-09-10 13:41:00 UTC    |     DuSable Lake Shore Dr & Monroe St    |     13300           |     Streeter Dr & Grand Ave       |     13022           |     41.88096    |     -87.6167    |     41.89228    |     -87.612     |     casual    |
+|  4  |     7.67E+19    |     classic_bike     |     2021-06-19 12:26:00 UTC    |     2021-06-19 12:44:00 UTC    |     Wabash Ave & Grand Ave               |     TA1307000117    |     Lake Shore Dr & North Blvd    |     LF-005          |     41.89147    |     -87.6268    |     41.91172    |     -87.6268    |     member    |
+|  5  |     1.56E+21    |     classic_bike     |     2021-08-18 22:34:00 UTC    |     2021-08-18 22:44:00 UTC    |     Wells St & Concord Ln                |     TA1308000050    |     St. Clair St & Erie St        |     13016           |     41.91213    |     -87.6347    |     41.89435    |     -87.6228    |     member    |
+|  6  |     1.56E+21    |     electric_bike    |     2021-09-19 03:08:00 UTC    |     2021-09-19 03:16:00 UTC    |     Lincoln Ave & Fullerton Ave          |     TA1309000058    |     Clark St & Drummond Pl        |     TA1307000142    |     41.92597    |     -87.6493    |     41.93123    |     -87.6444    |     member    |
+
+I also realised that the **ride_id** is different in format to the typical one that contains 16 alphanumeric characters. Upon further inspection, it is found that there are only 2074 trips out of the 4,525,842 trips (0.046%) that contain **ride_id** that does not fit the format. Hence, I will not be selecting these trips for the analysis later.
+
+According to their [website](https://ride.divvybikes.com/system-data), trips below 60 seconds in length were removed (potentially false starts or users trying to re-dock a bike to ensure it was secure). However, upon further exploration, there are still 41,800 trips with duration below 60 seconds. These trips will also not be selected for analysis later.
+
+### Data Validation
+
+To ensure that there is no error in data entry, we will be performing data validation on certain columns such as **rideable_type** and **member_casual**. The following query shows that there is no erroneous data entry in these columns. 
+
+```{r eval=FALSE, include=TRUE}
+WITH final_data 
+    AS 
+    (SELECT 
+        * 
+    FROM 
+        `bike-sharing-data-336906.bike_trip_data_202012_to_202111.complete_data`
+    WHERE 
+        LENGTH(ride_id)=16 AND TIMESTAMP_DIFF(ended_at, started_at, SECOND) >= 60)
+
+    SELECT 
+        COUNT(*) AS wrong_entries
+    FROM 
+        final_data 
+    WHERE rideable_type NOT IN ("classic_bike", "electric_bike", "docked_bike") OR member_casual NOT IN ("member", "casual")
+```
+
+To check the latitude and longtitude columns, we will be finding the range of each column to determine whether there are any extreme values. The following query will help us determine the range:
+
+```{r eval=FALSE, include=TRUE}
+SELECT 
+    MIN(start_lat) AS min_start_lat, 
+    MAX(start_lat) AS max_start_lat,
+    MIN(start_lng) AS min_start_lng,
+    MAX(start_lng) AS max_start_lng,
+    MIN(end_lat) AS min_end_lat,
+    MAX(end_lat) AS max_end_lat,
+    MIN(end_lng) AS min_end_lng,
+    MAX(end_lng) AS max_end_lng    
+FROM `bike-sharing-data-336906.bike_trip_data_202012_to_202111.complete_data`;
+
+```
+| min_start_lat | max_start_lat | min_start_lng | max_start_lng      | min_end_lat | max_end_lat | min_end_lng | max_end_lng |
+|:---------------:|:---------------:|:---------------:|:--------------------:|:-------------:|:-------------:|:-------------:|:-------------:|
+| 41.64850076 | 42.064854 | -87.83 | -87.52823173999786 | 41.64850076 | 42.16811567 | -87.83 |-87.524517 |
+
+There are no extreme values and all the coordinates are well within Chicago.
+
+The **start_staion_id** and **end_station_id** columns do not have a fixed format so it is harder to validate the columns. However, this won't be an issue as I will not be using them for analysis.
+
+We will create a table **final_data** to store the processed data for analysis. We will also be adding four more columns named **trip_duration**, **route**, **month** and **day_of_week** to facilitate the analysis later. **trip_duration** is the difference between **ended_at** timestamp and **started_at** timestamp while **route** is just a combination of **start_station_name** and **end_station_name**. **month** and **day_of_week** are information extracted from the **started_at** timestamp. The final table consist of 4,481,981 historical trips from 01/12/2020 to 30/11/2021. The query is as follow:
+
+```{r eval=FALSE, include=TRUE}
+CREATE TABLE `bike-sharing-data-336906.bike_trip_data_202012_to_202111.final_data` AS
+    (SELECT 
+        *,
+        TIMESTAMP_DIFF(ended_at, started_at, SECOND) AS trip_duration,
+        CONCAT(start_station_name, ' to ', end_station_name) AS route,
+        EXTRACT(MONTH FROM started_at) AS month,
+        EXTRACT(DAYOFWEEK FROM started_at) AS day_of_week
+    FROM 
+        `bike-sharing-data-336906.bike_trip_data_202012_to_202111.complete_data`
+    WHERE 
+        LENGTH(ride_id)=16 AND TIMESTAMP_DIFF(ended_at, started_at, SECOND) >= 60)
+```
+
+## 4) Analyse and Share
+
+We will proceed with analysing our processed data in **R**. We will be using packages from the **tidyverse**, **bigrquery** and **scales**, so we will install and load the packages first. Do uncomment the lines if you haven't install the packages.
+
+```{r message=FALSE, warning=FALSE}
+# install.packages('tidyverse')
+# install.packages('bigrquery')
+# install.packages('scales')
+library(tidyverse)
+library(bigrquery)
+library(scales)
+```
+
+### Connecting to table in BigQuery
+
+The code below will help to establish a connection with BigQuery. However, you need to specify the respective project name and dataset. You are also required to authenticate your Google account in a browser window the first time you try to use the connection, for example listing all available tables in the dataset using **dbListTables()** function.
+
+```{r message=FALSE, warning=FALSE}
+con <- dbConnect (
+  bigrquery::bigquery(),
+  project = "bike-sharing-data-336906",
+  dataset = "bike_trip_data_202012_to_202111"
+  )
+
+dbListTables(con)
+```
+
+We can access the table in BigQuery using the following code. This creates a direct reference to the table in BigQuery but does not bring the data in-memory, which is great for large dataset. 
+
+```{r}
+final_data <- dplyr::tbl(con, "final_data")
+```
+
+### Analysis and Visualisation of data
+
+First, we will find out the total number of trips by casual riders and members respectively.
+
+```{r}
+num_of_trips_by_groups <- final_data %>% group_by(member_casual) %>% summarise(num_trips = n()) %>% collect()
+num_of_trips_by_groups
+```
+
+As seen, the percentage of the total trips in the past 12 months by casual riders is 44.9%, showing that a significant percentage of Cyclistic's bike usage are from casual riders and it is worthwhile converting those casual riders into members.
+
+#### Popularity of different types of bikes
+
+Next, we will investigate the user profile for each type of bike (classic bike, electric bike, docked bike).
+
+```{r message=FALSE, warning=FALSE}
+user_profile_for_each_type_of_bike <- final_data %>% group_by(rideable_type, member_casual) %>% summarise(num_trips_by_bikes = n(), percentage = paste0(round(100 * n()/4481981, 1 ), "%")) %>%  collect()
+user_profile_for_each_type_of_bike
+```
+
+```{r include=FALSE}
+user_profile_for_each_type_of_bike_chart <- final_data %>% group_by(rideable_type, member_casual) %>% summarise(num_trips_by_bikes = n(), percentage = round(100 * n()/4481981, 1 )) %>%  collect() %>% mutate(groups = paste0(rideable_type, "_", member_casual, " (", percentage, "%)"))
+```
+
+```{r message=FALSE, warning=FALSE, echo=FALSE, eval=TRUE}
+pie_chart <- ggplot(data=user_profile_for_each_type_of_bike_chart, mapping=aes(x="", y=percentage, fill=groups)) + geom_col(width=1) + coord_polar("y", start=0) + theme_void() + labs(title="Proportion of trips by bike types and membership status")
+pie_chart
+```
+
+From the pie chart above, the majority of the trips are carried out by members using the classic bike, followed by casual riders using the classic bike. Among both members and casual riders, we can see that classic bike is the most popular, followed by electric bike, and finally docked bike.
+
+#### Trip Duration
+
+Next, we will determine if there is a difference in average trip duration between members and casual riders.
+```{r message=FALSE, warning=FALSE}
+avg_duration <- final_data %>% group_by(member_casual) %>% summarise(average_duration_of_trips = mean(trip_duration)) %>% collect()
+
+avg_duration
+```
+
+We will examine the cause of the huge difference in average trip duration between casual riders and members.
+
+```{r message=FALSE, warning=FALSE}
+max_trip_duration <- final_data %>% filter(trip_duration > 24*60*60) %>% group_by(member_casual) %>% summarise(num_trips_longer_than_24hr = n(), max_duration_in_seconds = max(trip_duration)) %>% collect()
+
+max_trip_duration
+
+```
+
+There are a lot more trips from casual riders that are longer than 24 hours and the maximum duration of the trips are also much longer at 3356640s (38.85 days) as compared to members. These outliers are humanly impossible to achieve and provides an inaccurate conclusion on the average duration of trips. Hence, we will filter out the trips that are more than 24 hours as these trips represent only 0.03% of the total number of trips and are not representative of the majority of the casual riders that we are targeting.
+
+```{r}
+final_data <- final_data %>% filter(trip_duration <= 24*60*60)
+
+avg_duration <- final_data %>% group_by(member_casual) %>% summarise(average_duration_of_trips = mean(trip_duration)) %>% collect()
+
+col_graph <- ggplot(data=avg_duration, mapping=aes(x=member_casual, y=average_duration_of_trips/60, fill=member_casual, label=round(average_duration_of_trips/60, 1))) + geom_col(width=0.6, show.legend = FALSE) + geom_text() + labs(title="Average duration of trips between casual riders and members", x="Membership status", y="Average duration of trips in minutes")
+
+col_graph
+
+```
+
+
+On average, casual riders spend more than **twice** as long for their bike trips as compared to members. 
+
+#### Most popular route and stations
+
+Earlier on during the **Process** phase, we have created a column named **route** to connect the **start_station_name** with the **end_station_name**. From there, we can then find the most popular route taken by casual riders and members.
+
+```{r message=FALSE, warning=FALSE, paged.print=FALSE}
+most_popular_routes_casual <- final_data %>% filter(member_casual == "casual") %>% group_by(route) %>% summarise(num_trips_casual = count(route)) %>% slice_max(num_trips_casual, n=10) %>% arrange(-num_trips_casual) %>% collect()
+
+most_popular_routes_casual
+                                                                                                                                                                
+most_popular_routes_member <- final_data %>% filter(member_casual == "member") %>% group_by(route) %>% summarise(num_trips_member = count(route)) %>% slice_max(num_trips_member, n=10) %>% arrange(-num_trips_member) %>% collect()
+
+most_popular_routes_member
+```
+
+Based on the top ten most popular route for casual riders, most of the routes are nearby [tourist attractions](https://www.google.com/maps/place/E+Grand+Ave+%26+N+Streeter+Dr,+Chicago,+IL+60611,+USA/@41.8921425,-87.6100731,17z/data=!4m13!1m7!3m6!1s0x880e2b525e10ee6d:0x1c44bc2bc0376a7!2sE+Grand+Ave+%26+N+Streeter+Dr,+Chicago,+IL+60611,+USA!3b1!8m2!3d41.8921227!4d-87.610043!3m4!1s0x880e2b525e10ee6d:0x1c44bc2bc0376a7!8m2!3d41.8921227!4d-87.610043) or [famous landmarks](https://www.google.com/maps/place/Millennium+Park/@41.8825524,-87.6225514,3a,75y,90t/data=!3m8!1e2!3m6!1sAF1QipNr0_J34QPvK2bUGcWURqJAUXTGxi7a9vt2DMCA!2e10!3e12!6shttps:%2F%2Flh5.googleusercontent.com%2Fp%2FAF1QipNr0_J34QPvK2bUGcWURqJAUXTGxi7a9vt2DMCA%3Dw152-h86-k-no!7i4032!8i2268!4m5!3m4!1s0x880e2ca68a4f9c03:0x44182cdcb5a91004!8m2!3d41.8825524!4d-87.6225514), hence we can infer that a significant portion of casual riders may be tourists in the city or local residents exploring these attractions during their free time. 
+
+On the contrary, the top ten routes for members are nearby [universities](https://www.google.com/maps/place/S+Ellis+Ave+%26+E+60th+St,+Chicago,+IL+60637,+USA/@41.7859101,-87.6011289,3a,75y,111.07h,83.42t/data=!3m6!1e1!3m4!1sE8cC-ME6oCOoXzN1aX_3rQ!2e0!7i16384!8i8192!4m5!3m4!1s0x880e293d28f9709f:0x2c06d91ed236b066!8m2!3d41.7859081!4d-87.6011825) and [residential estates](https://www.google.com/maps/place/S+Calumet+Ave+%26+E+33rd+Blvd,+Chicago,+IL+60616,+USA/@41.8347448,-87.6182117,3a,75y,181.58h,86.93t/data=!3m7!1e1!3m5!1ssChCMz4vyF5ZxY_OpDykwQ!2e0!6shttps:%2F%2Fstreetviewpixels-pa.googleapis.com%2Fv1%2Fthumbnail%3Fpanoid%3DsChCMz4vyF5ZxY_OpDykwQ%26cb_client%3Dsearch.gws-prod.gps%26w%3D86%26h%3D86%26yaw%3D89.095474%26pitch%3D0%26thumbfov%3D100!7i16384!8i8192!4m5!3m4!1s0x880e2bf55a5e5681:0x41b329c49bcace80!8m2!3d41.8347508!4d-87.6181951), hence a significant portion of members may be students or working adults using the bikes as a daily form of transportation.
+
+The top ten stations with the highest number of trips starting or ending can also be found below.
+```{r message=FALSE, warning=FALSE}
+
+start_end_station_count <- union_all(final_data %>% select(start_station_name) %>% rename(station_name = start_station_name), final_data %>% select(end_station_name) %>% rename(station_name = end_station_name)) %>% group_by(station_name) %>% summarise(num_trips_start_or_end = n()) %>% slice_max(num_trips_start_or_end, n=10) %>% arrange(-num_trips_start_or_end)
+
+start_end_station_count
+```
+
+#### Popular months and days
+
+We will try to find if there is a relationship between the months and the number of trips by casual riders and members.
+
+```{r message=FALSE, warning=FALSE, paged.print=TRUE}
+casual_member_by_months <- final_data %>% group_by(month, member_casual) %>% summarise(num_trips = n()) %>% arrange(month, member_casual) %>% collect() 
+casual_member_by_months_wide <- casual_member_by_months %>% spread(member_casual, num_trips) %>% rename(casual_num_trips = casual, member_num_trips = member)
+
+casual_member_by_months_wide
+```
+
+```{r message=FALSE, warning=FALSE}
+
+line_chart_month <- ggplot(data=casual_member_by_months, mapping=aes(x=as.factor(month), y=num_trips, color=member_casual, group=member_casual)) + geom_point() + geom_line() + labs(title="Number of trips by months", x="Month", y="Number of trips") + scale_y_continuous(labels = scales::number_format(accuracy = 1))
+
+line_chart_month
+
+```
+
+The number of trips per month increase steadily from the start of the year and reach the peak from June to September before decreasing steadily towards the end of the year.
+
+We will also investigate if there is a particular day in the week that is more popular for casual and member riders.
+
+```{r message=FALSE, warning=FALSE}
+casual_member_by_day <- final_data %>% group_by(day_of_week, member_casual) %>% summarise(num_trips = n()) %>% arrange(day_of_week, member_casual) %>% collect() 
+casual_member_by_day_wide <- casual_member_by_day %>% spread(member_casual, num_trips) %>% rename(casual_num_trips = casual, member_num_trips = member)
+
+casual_member_by_day_wide
+```
+
+```{r}
+line_chart_day <- ggplot(data=casual_member_by_day, mapping=aes(x=as.factor(day_of_week), y=num_trips, color=member_casual, group=member_casual)) + geom_point() + geom_line() + labs(title="Number of trips by days in a week", x="Day", y="Total number of trips") + scale_y_continuous(labels = scales::number_format(accuracy = 1), breaks=seq(200000, 500000, by=50000))
+
+line_chart_day
+```
+
+Saturday, Sunday and Monday seems to be more popular with casual riders while middle of the week (Wednesday, Thursday) seems to be more popular with member riders.
+
+## 5) Act
+
+### Summary
+
+We were tasked to identify how annual members and casual riders use Cyclistic bikes differently. Based on above analysis, here are a few insights we have gathered.
+
+1) About 45% of the past 12 months historical trips are made by casual riders, showing that a significant portion of Cyclistic's customer base are still casual users and it may be worthwhile converting them to annual members.
+
+2) Classic bikes are the most popular, followed by electric bikes and finally docked bikes. This is consistent in both casual and member riders.
+
+3) The average trip duration of a casual rider is 28.5 minutes, which is more than twice the average trip duration of a member rider at 13.4 minutes. This may be due to Cyclistic's business model of providing single ride passes, full-day passes and annual memberships. Since there is no information stating that casual riders are charged based on the duration of ride, it makes more economical sense for casual riders to make use of their single ride passes and ride the bike as long as possible. However, for members, there is no incentive for them to do so as I presume that they have unlimited rides annually.
+
+4) The top ten routes with the highest number of trips for casual riders are found near tourist attractions or famous landmarks, while the top ten routes for annual members are found near universities and residential estate. This means that there is a significant portion of casual riders who are tourists or residents using the bikes to explore nearby attractions. Meanwhile, a significant portion of annual members may be students or working professionals using the bikes as a means of transportation.
+
+5) The weekends are more popular for casual riders. Meanwhile there is not much preference for member riders throughout the week, except a slightly higher number of trips on Wednesdays and Thursdays. This further examplify the customer profile of the casual and member riders.
+
+6) Lastly, June to September is the period with the highest number of monthly trips. This coincides with the [warmer](https://www.currentresults.com/Weather/Illinois/Places/chicago-temperatures-by-month-average.php) months in Chicago with a temperature range of 14°C to 29°C during this period of time, thus attracting higher number of bike users.
+
+### Top 3 marketing strategy to convert casual riders to annual members
+
+1) Since the average trip duration of a casual rider is 28.5 minutes, we can use a tiered pricing model for single ride passes. The first tier will be set at a duration lower than the average trip duration, for example 20 minutes. This means that a huge portion of the casual riders will probably go for a higher tier single ride passes which are more expensive. They will then reconsider if the single ride passes are worth it, which instantly makes the annual memberships more attractive. 
+
+2) We have recognised that a significant portion of casual riders are tourists or locals using the bike to explore nearby attractions. It will be extremely hard to convince tourists to buy annual passes, hence we will be targeting the locals instead. Physical advertisements such as outdoor billboards and posters can be strategically placed along popular routes for casual riders during the warmer months (June to September). 
+
+3) We can also set up booths near the top ten stations, running promotions for the annual membership from June to September (especially during the weekends). Digital advertisements can also be targeted at existing casual riders especially students or working professionals, encouraging them to utilise the bikes as a means of transportation.  
+
+### Next steps
+
+1) Conduct a user survey to find out the appropriate price point for the single ride passes so that no customers will be lost due to unacceptable pricing
+
+2) Identify places where the public transport system is not very comprehensive and build docking stations there so that the bikes can be used as a means to cover the first and last mile.
+
+
